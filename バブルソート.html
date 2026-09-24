@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>バブルソート インタラクティブ</title>
+<style>
+:root{
+  --text:#222;
+  --muted:#777;
+  --line:#d8d8d8;
+  --blue:#3b82f6;
+  --blue-bg:#dfeaff;
+  --swap:#f2f2f2;
+  --panel:#fff;
+  --control:#f3f3f3;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:#fafafa;
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",
+    "Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+.app{
+  width:min(1200px,calc(100% - 28px));
+  margin:18px auto;
+  background:var(--panel);
+  border:1px solid #ddd;
+  border-radius:28px;
+  overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.header{
+  text-align:center;
+  padding:34px 24px 12px;
+}
+.header h1{
+  margin:0 0 8px;
+  font-size:clamp(23px,3vw,32px);
+  font-weight:750;
+}
+.header p{
+  margin:0;
+  color:var(--muted);
+  font-size:18px;
+}
+.stage{
+  padding:14px 42px 0;
+}
+.chart{
+  height:390px;
+  border-bottom:2px solid #cfcfcf;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:18px;
+  padding:0 20px;
+}
+.item{
+  width:76px;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+  position:relative;
+}
+.bar{
+  width:58px;
+  border:2px solid #d2d2d2;
+  border-radius:12px 12px 0 0;
+  background:#fff;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding-top:11px;
+  font-size:22px;
+  font-weight:650;
+  transition:transform .55s ease, border-color .18s, background .18s;
+  will-change:transform;
+}
+.bar.compare{
+  border-color:var(--blue);
+  background:var(--blue-bg);
+}
+.bar.swapping{
+  border-color:#222;
+  background:var(--swap);
+}
+.index{
+  height:42px;
+  display:flex;
+  align-items:flex-end;
+  padding-bottom:8px;
+  color:#888;
+  font-size:16px;
+}
+.result{
+  min-height:72px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:21px;
+  color:#666;
+  padding:10px;
+}
+.controls{
+  background:var(--control);
+  border-top:1px solid #ddd;
+  padding:17px 22px 22px;
+}
+.guide-title{
+  margin:0 0 8px;
+  font-size:18px;
+}
+.range-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+input[type=range]{
+  flex:1;
+  accent-color:#888;
+}
+.counter{
+  min-width:72px;
+  text-align:right;
+  color:#666;
+}
+.buttons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:14px;
+}
+button{
+  min-height:52px;
+  border:1px solid #d7d7d7;
+  border-radius:28px;
+  background:#fff;
+  font-size:18px;
+  cursor:pointer;
+}
+button:hover{background:#fafafa}
+button:focus-visible{
+  outline:3px solid #9cc2ff;
+  outline-offset:2px;
+}
+button:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+.guide{
+  padding:20px 30px 26px;
+  border-top:1px solid #eee;
+}
+.guide h2{
+  margin:0 0 12px;
+  text-align:center;
+  font-size:20px;
+}
+.guide-row{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px 26px;
+  color:#666;
+  font-size:16px;
+}
+.guide-row span::before{
+  content:"";
+  display:inline-block;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  margin-right:7px;
+  background:#aaa;
+  vertical-align:1px;
+}
+@media(max-width:700px){
+  .app{width:100%;margin:0;border-radius:0;border-left:0;border-right:0}
+  .stage{padding:8px 10px 0}
+  .chart{height:315px;gap:7px;padding:0 2px}
+  .item{width:44px}
+  .bar{width:36px;font-size:16px;padding-top:8px}
+  .index{height:32px;font-size:12px}
+  .result{font-size:17px;min-height:64px}
+  .buttons{gap:8px}
+  button{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <h1 id="title">93 と 15 を比較 → 交換</h1>
+    <p id="subtitle">パス1・比較1/5</p>
+  </header>
+
+  <main class="stage">
+    <div id="chart" class="chart" aria-label="バブルソートの数字"></div>
+    <div id="result" class="result" aria-live="polite">
+      「ステップ」で93と15の比較・交換を確認できます。
+    </div>
+  </main>
+
+  <section class="controls">
+    <p class="guide-title">並べ替え手順</p>
+    <div class="range-row">
+      <input id="progress" type="range" min="0" max="15" value="0" step="1"
+             aria-label="並べ替え手順">
+      <span id="counter">0 / 15</span>
+    </div>
+    <div class="buttons">
+      <button id="shuffle" type="button">シャッフル</button>
+      <button id="play" type="button">再生</button>
+      <button id="step" type="button">ステップ</button>
+      <button id="pass" type="button">パスを完了</button>
+    </div>
+  </section>
+
+  <section class="guide">
+    <h2>バブルソートの動き</h2>
+    <div class="guide-row">
+      <span>隣同士を比較</span>
+      <span>左が大きければ交換</span>
+      <span>次の組へ進む</span>
+      <span>最後まで繰り返す</span>
+      <span>もう一度最初から行う</span>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const initial = [93,15,76,8,34,17];
+  let values = [...initial];
+  let operations = [];
+  let step = 0;
+  let timer = null;
+  let animating = false;
+
+  const chart = document.getElementById("chart");
+  const title = document.getElementById("title");
+  const subtitle = document.getElementById("subtitle");
+  const result = document.getElementById("result");
+  const progress = document.getElementById("progress");
+  const counter = document.getElementById("counter");
+  const stepBtn = document.getElementById("step");
+  const playBtn = document.getElementById("play");
+
+  function makeOperations(){
+    const a = [...values];
+    const list = [];
+
+    for(let pass=1; pass<=a.length-1; pass++){
+      for(let j=0; j<a.length-pass; j++){
+        const left=a[j];
+        const right=a[j+1];
+        const swap=left>right;
+
+        // 「比較前」と「比較後」の状態を必ず1操作として保持。
+        // 交換が必要なら、after は実際に左右を入れ替えた状態。
+        const before=[...a];
+
+        if(swap){
+          a[j]=right;
+          a[j+1]=left;
+        }
+
+        list.push({
+          pass,
+          j,
+          left,
+          right,
+          swap,
+          before,
+          after:[...a]
+        });
+      }
+    }
+    operations=list;
+    progress.max=String(operations.length);
+  }
+
+  function barHeight(value, maxValue){
+    return Math.max(26, value/maxValue*320);
+  }
+
+  function render(state, animateSwap=false){
+    const arr = state ? state.after : values;
+    const maxValue=Math.max(...arr);
+    chart.innerHTML="";
+
+    arr.forEach((value,i)=>{
+      const item=document.createElement("div");
+      item.className="item";
+
+      const bar=document.createElement("div");
+      bar.className="bar";
+      bar.style.height=barHeight(value,maxValue)+"px";
+      bar.textContent=String(value);
+
+      if(state && (i===state.j || i===state.j+1)){
+        bar.classList.add(state.swap ? "swapping" : "compare");
+      }
+
+      const idx=document.createElement("div");
+      idx.className="index";
+      idx.textContent=String(i+1);
+
+      item.appendChild(bar);
+      item.appendChild(idx);
+      chart.appendChild(item);
+    });
+
+    if(!state){
+      title.textContent="93 と 15 を比較 → 交換";
+      subtitle.textContent="パス1・比較1/5";
+      result.textContent="「ステップ」で93と15の比較・交換を確認できます。";
+      counter.textContent=`0 / ${operations.length}`;
+      progress.value="0";
+      return;
+    }
+
+    const comparisonInPass=state.j+1;
+    const comparisonTotal=state.before.length-state.pass;
+    title.textContent=`${state.left} と ${state.right} を比較 → ${state.swap ? "交換" : "交換しない"}`;
+    subtitle.textContent=`パス${state.pass}・比較${comparisonInPass}/${comparisonTotal}`;
+
+    if(state.swap){
+      result.textContent=`${state.left} と ${state.right} を入れ替え → ${state.right}　${state.left}`;
+    }else{
+      result.textContent=`${state.left} ≤ ${state.right} なので、入れ替えない`;
+    }
+
+    counter.textContent=`${step} / ${operations.length}`;
+    progress.value=String(step);
+  }
+
+  // ステップ1回分を「比較 → 交換」の順に画面上で明確に見せる。
+  async function performStep(){
+    if(animating || step>=operations.length) return;
+    animating=true;
+    stopTimer();
+
+    const op=operations[step];
+
+    // まず比較中の状態を表示。
+    const compareState={...op, after:[...op.before]};
+    render(compareState);
+
+    await wait(420);
+
+    // 交換が必要なら、実際の入れ替えをアニメーション。
+    if(op.swap){
+      const bars=[...chart.querySelectorAll(".bar")];
+      if(bars[op.j] && bars[op.j+1]){
+        const a=bars[op.j];
+        const b=bars[op.j+1];
+        const distance=b.getBoundingClientRect().left-a.getBoundingClientRect().left;
+        a.style.transform=`translateX(${distance}px)`;
+        b.style.transform=`translateX(${-distance}px)`;
+        await wait(500);
+      }
+    }else{
+      await wait(250);
+    }
+
+    step++;
+    render(op,true);
+    animating=false;
+
+    if(step>=operations.length){
+      result.textContent=`並べ替え完了：${operations[operations.length-1].after.join("　")}`;
+    }
+  }
+
+  function wait(ms){
+    return new Promise(resolve=>setTimeout(resolve,ms));
+  }
+
+  async function completePass(){
+    if(animating) return;
+    stopTimer();
+
+    if(step>=operations.length) return;
+
+    const currentPass=operations[step].pass;
+    while(step<operations.length && operations[step].pass===currentPass){
+      await performStep();
+    }
+  }
+
+  function togglePlay(){
+    if(animating) return;
+
+    if(timer){
+      stopTimer();
+      return;
+    }
+
+    if(step>=operations.length){
+      step=0;
+      render(null);
+    }
+
+    playBtn.textContent="一時停止";
+    timer=setInterval(async()=>{
+      if(animating) return;
+      if(step>=operations.length){
+        stopTimer();
+        return;
+      }
+      await performStep();
+    },1100);
+  }
+
+  function stopTimer(){
+    if(timer!==null){
+      clearInterval(timer);
+      timer=null;
+    }
+    playBtn.textContent="再生";
+  }
+
+  function reset(){
+    stopTimer();
+    values=[...initial];
+    makeOperations();
+    step=0;
+    animating=false;
+    render(null);
+  }
+
+  function shuffle(){
+    stopTimer();
+    // 授業で再現性を持たせるため、ここでは初期配列に戻す。
+    // ボタン名は教材の見た目に合わせて残す。
+    reset();
+  }
+
+  progress.addEventListener("input",()=>{
+    if(animating) return;
+    stopTimer();
+    step=Number(progress.value);
+    if(step===0){
+      render(null);
+    }else{
+      render(operations[step-1]);
+    }
+  });
+
+  stepBtn.addEventListener("click",performStep);
+  playBtn.addEventListener("click",togglePlay);
+  document.getElementById("pass").addEventListener("click",completePass);
+  document.getElementById("shuffle").addEventListener("click",shuffle);
+
+  reset();
+})();
+</script>
+</body>
+</html>
